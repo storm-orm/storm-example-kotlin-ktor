@@ -9,6 +9,7 @@ import io.ktor.server.thymeleaf.ThymeleafContent
 import io.ktor.server.util.getOrFail
 import st.orm.demo.imdb.service.MovieService
 import st.orm.demo.imdb.service.WatchlistService
+import st.orm.ktor.transactional
 
 fun Route.movieRoutes(movieService: MovieService, watchlistService: WatchlistService) {
     get("/movie/{movieId}") {
@@ -18,8 +19,14 @@ fun Route.movieRoutes(movieService: MovieService, watchlistService: WatchlistSer
         call.respond(ThymeleafContent("movie", mapOf("detail" to detail)))
     }
 
-    post("/api/watchlist/{movieId}") {
-        val movieId = call.parameters.getOrFail("movieId")
-        call.respond(WatchlistState(onWatchlist = watchlistService.toggle(movieId)))
+    // Route-scoped transaction: the exists/insert/remove cycle inside toggle()
+    // runs atomically per request without any transaction code in the service.
+    // The transaction opens before the handler, commits when it completes, and
+    // rolls back when it throws.
+    transactional {
+        post("/api/watchlist/{movieId}") {
+            val movieId = call.parameters.getOrFail("movieId")
+            call.respond(WatchlistState(onWatchlist = watchlistService.toggle(movieId)))
+        }
     }
 }

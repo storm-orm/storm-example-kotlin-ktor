@@ -12,10 +12,11 @@ persistence context.
 
 ## Stack
 
-- Kotlin 2.2 / Java 21, Ktor 3.1 (Netty, Thymeleaf, ContentNegotiation)
-- Storm ORM (`storm-ktor`, `storm-ktor-koin`) with the KSP metamodel generator
+- Kotlin 2.2 / Java 21, Ktor 3.2 (Netty, Thymeleaf, ContentNegotiation)
+- Storm ORM (`storm-ktor`) with the KSP metamodel generator
   and the Storm compiler plugin
-- Koin for dependency injection
+- Ktor's built-in dependency injection plugin for service wiring
+- Micrometer metrics backed by a Prometheus registry, scraped at `/metrics`
 - PostgreSQL 17 (Docker Compose) with Flyway migrations, run explicitly at
   startup
 - kotlinx.serialization for JSON APIs and cache values; Jackson for parsing
@@ -61,8 +62,8 @@ internet access.
 src/main/kotlin/st/orm/demo/imdb/
 ├── Application.kt   Ktor module: plugin setup (Storm with the Flyway
 │                    migration hook, serialization, Thymeleaf)
-├── Koin.kt          Koin wiring: Storm's stormModule() exposes the
-│                    auto-registered repositories, singleOf wires the services
+├── Dependencies.kt  Service wiring with Ktor's dependency injection: the
+│                    Storm plugin registers the ORMTemplate and repositories
 ├── model/          Storm entities (@PK, @FK) and projections
 ├── repository/     EntityRepository interfaces with QueryBuilder queries
 ├── service/        Business logic in suspend `transaction { }` blocks,
@@ -89,11 +90,13 @@ Each part of the app demonstrates a Storm feature:
   (`Movie_.startYear`, `Principal_.person`). Aggregations return plain data
   classes; computed expressions use SQL template lambdas with metamodel
   references.
-- **Transactions** (`service/`): Storm's coroutine-native suspend
+- **Transactions** (`service/`, `web/`): Storm's coroutine-native suspend
   `transaction { }` blocks at the service level, called directly from Ktor's
   suspend route handlers, with no `runBlocking` bridge in the request path. Storm
   manages transactions on the `DataSource` directly, with no framework
-  transaction manager involved.
+  transaction manager involved. The watchlist toggle shows the route-scoped
+  variant: the route body is wrapped in storm-ktor's `transactional { }`, so
+  the service stays transaction-free and joins the surrounding transaction.
 - **Streaming import** (`service/ImdbDataImporter.kt`): Flow-based pipeline
   that parses TSV rows into entities and hands them to Storm's suspending
   batch insert, one pass per file, without materializing entity lists. It runs
@@ -106,11 +109,17 @@ Each part of the app demonstrates a Storm feature:
   serialized with kotlinx.serialization for the REST endpoints, and a cache
   that stores values as serialized JSON to prove entities survive the
   round-trip (`KotlinxSerializedCache`, used explicitly by `StatisticsService`).
-- **Startup wiring** (`Application.kt`, `Koin.kt`): one `install(Storm)`
-  plugin with the Flyway migration hook, and Koin for dependency injection:
-  `stormModule()` (from `storm-ktor-koin`) exposes the `ORMTemplate` and every
-  auto-registered repository by type, so services are wired with
-  `singleOf(::HomeService)`, with no manual lookups.
+- **Startup wiring** (`Application.kt`, `Dependencies.kt`): one `install(Storm)`
+  plugin with the Flyway migration hook, and Ktor's built-in dependency
+  injection: the Storm plugin registers the `ORMTemplate` and every
+  auto-registered repository in the dependency container by type, so services
+  resolve their repositories directly, with no manual lookups.
+- **Observability** (`Application.kt`, `Dependencies.kt`): with an
+  `ObservationRegistry` in the dependency container, the Storm plugin reports
+  every query as a Micrometer Observation (`storm.query`), following the
+  OpenTelemetry database semantic conventions. A Prometheus registry backs the
+  observations; scrape `/metrics` and look for the `storm_query_seconds`
+  timers.
 
 ## Testing
 

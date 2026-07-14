@@ -2,6 +2,9 @@ plugins {
     kotlin("jvm") version "2.2.21"
     kotlin("plugin.serialization") version "2.2.21"
     id("com.google.devtools.ksp") version "2.2.21-2.0.5"
+    // The Storm plugin imports the BOM, adds storm-kotlin and storm-core, wires the
+    // metamodel processor to KSP, and selects the compiler-plugin variant matching Kotlin.
+    id("st.orm") version "1.13.0"
     application
 }
 
@@ -21,33 +24,29 @@ repositories {
     mavenCentral()
 }
 
-val ktorVersion = "3.1.2"
+val ktorVersion = "3.2.3"
 
 dependencies {
-    implementation(platform("st.orm:storm-bom:1.12.0"))
-    ksp(platform("st.orm:storm-bom:1.12.0"))
-    kotlinCompilerPluginClasspath(platform("st.orm:storm-bom:1.12.0"))
-
-    // Ktor server (storm-ktor is built against Ktor 3.1.2).
+    // Ktor server (storm-ktor is built against Ktor 3.2.3).
     implementation("io.ktor:ktor-server-core:$ktorVersion")
     implementation("io.ktor:ktor-server-netty:$ktorVersion")
     implementation("io.ktor:ktor-server-thymeleaf:$ktorVersion")
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    // Ktor's built-in dependency injection: the Storm plugin registers the ORMTemplate
+    // and every auto-registered repository; the services are provided in Dependencies.kt.
+    implementation("io.ktor:ktor-server-di:$ktorVersion")
+    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
+    implementation("io.ktor:ktor-server-metrics-micrometer:$ktorVersion")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.15.4")
 
-    // Storm ORM: Kotlin API + the Ktor integration, with storm-core at runtime.
-    implementation("st.orm:storm-kotlin")
+    // Storm ORM: the Ktor integration and serialization modules. The Gradle plugin
+    // already provides storm-kotlin, storm-core, and the metamodel processor.
     implementation("st.orm:storm-ktor")
     implementation("st.orm:storm-jackson3")
     implementation("st.orm:storm-kotlinx-serialization")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
-    runtimeOnly("st.orm:storm-core")
     runtimeOnly("st.orm:storm-postgresql")
-
-    // Koin dependency injection: stormModule() exposes the ORMTemplate and all
-    // auto-registered repositories to Koin.
-    implementation("st.orm:storm-ktor-koin")
-    implementation("io.insert-koin:koin-ktor:4.0.4")
 
     // Connection pooling and Flyway migrations (run explicitly at startup).
     implementation("com.zaxxer:HikariCP:6.2.1")
@@ -62,9 +61,6 @@ dependencies {
 
     // SLF4J backend for Ktor/Storm logging.
     runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
-
-    ksp("st.orm:storm-metamodel-ksp")
-    kotlinCompilerPluginClasspath("st.orm:storm-compiler-plugin-2.2")
 
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
