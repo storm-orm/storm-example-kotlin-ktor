@@ -12,7 +12,7 @@ persistence context.
 
 ## Stack
 
-- Kotlin 2.2 / Java 21, Ktor 3.2 (Netty, Thymeleaf, ContentNegotiation)
+- Kotlin 2.3 / Java 21, Ktor 3.4 (Netty, Thymeleaf, ContentNegotiation)
 - Storm ORM (`storm-ktor`) with the KSP metamodel generator
   and the Storm compiler plugin
 - Ktor's built-in dependency injection plugin for service wiring
