@@ -115,12 +115,14 @@ Each part of the app demonstrates a Storm feature:
   injection: the Storm plugin registers the `ORMTemplate` and every
   auto-registered repository in the dependency container by type, so services
   resolve their repositories directly, with no manual lookups.
-- **Observability** (`Application.kt`, `Dependencies.kt`): with an
-  `ObservationRegistry` in the dependency container, the Storm plugin reports
-  every query as a Micrometer Observation (`storm.query`), following the
-  OpenTelemetry database semantic conventions. A Prometheus registry backs the
-  observations; scrape `/metrics` and look for the `storm_query_seconds`
-  timers.
+- **Observability** (`Application.kt`, `Dependencies.kt`, `application.conf`):
+  with an `ObservationRegistry` in the dependency container, the Storm plugin
+  reports every query and every transaction as a Micrometer Observation
+  (`storm.query`, `storm.transaction`). Query observations follow the
+  OpenTelemetry database semantic conventions, selected with
+  `storm.observations.semanticConventions = otel` in `application.conf`. A
+  Prometheus registry backs the observations; scrape `/metrics` and look for
+  the `storm_query_seconds` and `storm_transaction_seconds` timers.
 
 ## Testing
 
@@ -128,9 +130,13 @@ Each part of the app demonstrates a Storm feature:
 ./gradlew test
 ```
 
-Repository tests run on an in-memory H2 database via `@StormTest`, so no
-Docker is required. Tests receive an `ORMTemplate` and a `SqlCapture` as parameters, so
-they can assert on the SQL Storm generates.
+Repository tests run on an in-memory H2 database via `@StormTest`. Tests receive
+an `ORMTemplate` and a `SqlCapture` as parameters, so they can assert on the SQL
+Storm generates. `EntitySchemaValidationTest` runs on PostgreSQL instead, through
+`@StormTest(database = POSTGRESQL)`: Storm starts a Testcontainers-managed
+PostgreSQL once per test run and applies the Flyway migration to it, so the
+entities are validated against the schema and dialect the application deploys
+with. That one test needs Docker, like running the application does.
 
 The Playwright interface tests run against a live application:
 
