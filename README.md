@@ -115,12 +115,14 @@ Each part of the app demonstrates a Storm feature:
   injection: the Storm plugin registers the `ORMTemplate` and every
   auto-registered repository in the dependency container by type, so services
   resolve their repositories directly, with no manual lookups.
-- **Observability** (`Application.kt`, `Dependencies.kt`): with an
-  `ObservationRegistry` in the dependency container, the Storm plugin reports
-  every query as a Micrometer Observation (`storm.query`), following the
-  OpenTelemetry database semantic conventions. A Prometheus registry backs the
-  observations; scrape `/metrics` and look for the `storm_query_seconds`
-  timers.
+- **Observability** (`Application.kt`, `Dependencies.kt`, `application.conf`):
+  with an `ObservationRegistry` in the dependency container, the Storm plugin
+  reports every query and every transaction as a Micrometer Observation
+  (`storm.query`, `storm.transaction`). Query observations follow the
+  OpenTelemetry database semantic conventions, selected with
+  `storm.observations.semanticConventions = otel` in `application.conf`. A
+  Prometheus registry backs the observations; scrape `/metrics` and look for
+  the `storm_query_seconds` and `storm_transaction_seconds` timers.
 
 ## Testing
 
