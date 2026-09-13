@@ -108,6 +108,11 @@ Each part of the app demonstrates a Storm feature:
   that parses TSV rows into entities and hands them to Storm's suspending
   batch insert, one pass per file, without materializing entity lists. It runs
   once at application startup, blocking until finished.
+- **SQL logging** (`application.conf`): the performance log summarises what each
+  call cost the database, the slow log reports a single execution that takes too
+  long, with its call site and how it compares to what its shape typically costs.
+  Both thresholds are set for production, so the logs stay quiet until something
+  is wrong; every `storm.sqlLog` key can be changed without touching the code.
 - **Schema validation**: on by default. The Storm plugin verifies every entity
   against the live database schema at startup and fails fast on any mismatch;
   the Flyway migration hook runs first, so validation always sees the migrated
