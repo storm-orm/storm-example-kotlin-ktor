@@ -64,7 +64,7 @@ src/main/kotlin/st/orm/demo/imdb/
 │                    migration hook, serialization, Thymeleaf)
 ├── Dependencies.kt  Service wiring with Ktor's dependency injection: the
 │                    Storm plugin registers the ORMTemplate and repositories
-├── model/          Storm entities (@PK, @FK) and projections
+├── model/          Storm entities (@PK, @FK)
 ├── repository/     EntityRepository interfaces with QueryBuilder queries
 ├── service/        Business logic in suspend `transaction { }` blocks,
 │                   plus the streaming IMDB importer
@@ -84,8 +84,8 @@ Each part of the app demonstrates a Storm feature:
 - **Entities** (`model/`): immutable data classes with `@PK`, `@FK`, `@UK`,
   and composite keys (`MovieGenre`, `Principal`). `MovieView` and `PersonGallery`
   hold their foreign keys as `Ref`, so writing one never joins the referenced
-  graph; `MovieSummary` / `PersonSummary` are projections that select a subset
-  of columns.
+  graph. Each table has one entity, and the list pages, search and
+  suggestions read it too.
 - **Repositories** (`repository/`): `EntityRepository` interfaces with default
   methods using the type-safe QueryBuilder and generated metamodel
   (`Movie_.startYear`, `Principal_.person`). Aggregations return plain data
